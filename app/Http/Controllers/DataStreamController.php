@@ -19,9 +19,9 @@ class DataStreamController extends Controller
     public function index(Request $request)
     {
         try {
-            $virtual_pins = VirtualPin::where('device_id', $request->device_id)
-                ->with('dataStreams')
-                ->get();
+            $virtual_pins = SecretKey::where('id', $request->device_id)
+                ->with('virtualPin')
+                ->firstOrFail();
 
             return response()->json([
                 'status' => 'success',
