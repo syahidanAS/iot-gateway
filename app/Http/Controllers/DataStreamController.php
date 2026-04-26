@@ -20,7 +20,7 @@ class DataStreamController extends Controller
     {
         try {
             $virtual_pins = SecretKey::where('id', $request->device_id)
-                ->with('virtualPin')
+                ->with('virtualPin.dataStreams')
                 ->firstOrFail();
 
             return response()->json([
