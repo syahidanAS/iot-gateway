@@ -14,7 +14,7 @@ class AutomationController extends Controller
     public function index(Request $request)
     {
         $automations = Automation::with(['conditions', 'actions'])
-            ->where('user_id', $request->id)
+            ->where('user_id', $request->user_id)
             ->latest()
             ->get();
 
