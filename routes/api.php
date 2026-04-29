@@ -38,9 +38,18 @@ Route::prefix('v1')->group(function () {
         Route::post('/', [DataStreamController::class, 'create']);
     });
 
-    Route::prefix('automation')->middleware('jwt')->group(function () {
-        Route::get('/device-infos', [AutomationController::class, 'populateDeviceInfo']);
-    });
+    Route::prefix('automation')
+        ->middleware('jwt')
+        ->group(function () {
+            Route::get('/device-infos', [AutomationController::class, 'populateDeviceInfo']);
+            Route::get('/', [AutomationController::class, 'index']);
+            Route::post('/', [AutomationController::class, 'store']);
+            Route::get('/{id}', [AutomationController::class, 'show']);
+            Route::put('/{id}', [AutomationController::class, 'update']);
+            Route::delete('/{id}', [AutomationController::class, 'destroy']);
+            Route::patch('/{id}/toggle', [AutomationController::class, 'toggleStatus']);
+            Route::post('/{id}/trigger', [AutomationController::class, 'trigger']);
+        });
 
     Route::get('/mutate-state', [DataStreamController::class, 'mutateState']);
     Route::get('/get-device-state', [DataStreamController::class, 'getDeviceStates']);
