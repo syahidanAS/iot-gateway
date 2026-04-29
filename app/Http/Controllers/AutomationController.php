@@ -40,7 +40,7 @@ class AutomationController extends Controller
 
             // CREATE AUTOMATION
             $automation = Automation::create([
-                'user_id' => $request->id,
+                'user_id' => $request->user_id,
                 'device_id' => $request->device_id,
                 'name' => $request->name,
                 'is_active' => true,
