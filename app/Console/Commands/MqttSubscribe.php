@@ -18,7 +18,7 @@ class MqttSubscribe extends Command
         $mqtt = new MqttClient(
             env('MQTT_HOST'),
             env('MQTT_PORT'),
-            'laravel-subscriber'
+            env('MQTT_CLIENT_ID', 'mqtt-subscriber')
         );
 
         $settings = (new ConnectionSettings)
