@@ -53,7 +53,8 @@ class MqttSubscribe extends Command
                     // echo "Device: $device_id | Type: $type | Message: $message\n";
 
                     try {
-                        $device = SecretKey::where('device_name', "device/alkha-device-013/V0")->get();
+                        $device = SecretKey::where('device_name', $device_id)->first();
+
                         if (!$device) {
                             echo "DEVICE NOT FOUND: $device_id\n";
                             return;
@@ -68,14 +69,13 @@ class MqttSubscribe extends Command
                             'virtual_pin' => $type,
                             'value'       => (string) $message,
                             'data_type'   => is_numeric($message) ? 'integer' : 'string',
-                            'tag'         => 'mqtt',
                             'created_at'  => now(),
                             'updated_at'  => now(),
                         ]);
 
                         echo "DB INSERT OK — device={$device_id} type={$type} value={$message}\n";
                     } catch (\Throwable $e) {
-                       Log::error($e->getMessage());
+                        Log::error($e->getMessage());
                         echo "  → File: " . $e->getFile() . " Line: " . $e->getLine() . "\n";
                     }
                 }, 0);
