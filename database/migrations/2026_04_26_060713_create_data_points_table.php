@@ -13,7 +13,7 @@ return new class extends Migration
     {
         Schema::connection('timescale_remote')->create('data_points', function (Blueprint $table) {
             $table->id();
-            $table->unsignedBigInteger('device_id');
+            $table->string('device_id');
             $table->string('virtual_pin');
             $table->string('value');
             $table->string('data_type');

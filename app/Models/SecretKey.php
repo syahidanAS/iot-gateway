@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 
 class SecretKey extends Model
 {
+    protected $table = 'secret_keys';
     protected $fillable = ['user_id', 'key', 'device_name'];
 
     public function virtualPin()
