@@ -23,6 +23,7 @@ Route::prefix('v1')->group(function () {
         Route::get('/', [SecretKey::class, 'index']);
         Route::post('/generate', [SecretKey::class, 'generate']);
         Route::delete('/{id}', [SecretKey::class, 'destroy']);
+        Route::get('/find/{id}', [SecretKey::class, 'findDeviceById']);
     });
 
     Route::prefix('virtual-pins')->middleware('jwt')->group(function () {

@@ -124,4 +124,28 @@ class SecretKey extends Controller
             ], 500);
         }
     }
+
+    public function findDeviceById($id)
+    {
+        try {
+            $device = ModelsSecretKey::where('id', $id)->first();
+
+            if (!$device) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'No devices found for this user'
+                ], 404);
+            }
+
+            return response()->json([
+                'status' => 'success',
+                'data' => $device
+            ], 200);
+        } catch (\Exception $e) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Failed to retrieve devices: ' . $e->getMessage()
+            ], 500);
+        }
+    }
 }
