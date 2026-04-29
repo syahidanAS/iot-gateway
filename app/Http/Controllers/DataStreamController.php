@@ -154,7 +154,6 @@ class DataStreamController extends Controller
                 'virtual_pin' => $virtualPin->pin_name,
                 'value' => $request->value,
                 'data_type' => $dataStream->data_type,
-                'tag' => $dataStream->tag,
                 'created_at' => now(),
                 'updated_at' => now(),
             ]);
@@ -215,7 +214,7 @@ class DataStreamController extends Controller
         try {
 
             // =========================
-            // 1. GET DEVICE + RELATION
+            // 1. GET DEVICE + PIN
             // =========================
             $device = SecretKey::where('id', $request->device_id)
                 ->with('virtualPin.dataStreams')
@@ -229,7 +228,7 @@ class DataStreamController extends Controller
             }
 
             // =========================
-            // 2. GET LATEST DATA (Timescale)
+            // 2. LATEST STATE FROM TIMESCALE
             // =========================
             $latest = DB::connection('timescale_remote')
                 ->select("
@@ -243,37 +242,29 @@ class DataStreamController extends Controller
                 ORDER BY virtual_pin, created_at DESC
             ", [$request->device_id]);
 
-            // convert ke map biar cepat lookup
             $latestMap = collect($latest)->keyBy('virtual_pin');
 
             // =========================
-            // 3. MERGE DATA PIN
+            // 3. MERGE RESPONSE
             // =========================
             $result = collect($device->virtualPin)->map(function ($pin) use ($latestMap) {
 
                 $state = $latestMap[$pin->pin_name] ?? null;
 
-                $value = $state->value ?? $pin->state ?? null;
-                $dataType = $state->data_type ?? $pin->dataStreams->data_type ?? null;
+                $value = $state->value ?? null;
+                $dataType = $state->data_type ?? null;
 
                 return [
-                    'pin' => $pin->pin_name, // 🔥 konsisten untuk MQTT topic
-                    'data_streams' => [
-                        'id' => $pin->dataStreams->id ?? null,
-                        'name' => $pin->dataStreams->name ?? null,
-                        'data_type' => $dataType,
-                        'min_value' => $pin->dataStreams->min_value ?? null,
-                        'max_value' => $pin->dataStreams->max_value ?? null,
-                        'tag' => $pin->dataStreams->tag ?? null,
-                    ],
-                    'state' => (string) ($value ?? 0),
+                    'pin_name' => $pin->pin_name,
+                    'data_streams' => $pin->dataStreams,
+                    'state' => $this->formatState($value, $dataType),
                     'raw_value' => $value,
-                    'updated_at' => $state->created_at ?? $pin->updated_at ?? null,
+                    'updated_at' => $state->created_at ?? null,
                 ];
             });
 
             // =========================
-            // 4. RESPONSE FINAL CLEAN
+            // 4. RESPONSE CLEAN
             // =========================
             return response()->json([
                 'status' => 'success',
@@ -281,7 +272,7 @@ class DataStreamController extends Controller
                     'device_id' => $device->id,
                     'device_name' => $device->device_name,
                     'key' => $device->key,
-                    'virtual_pin' => $result->values(), // 🔥 reset index biar array clean
+                    'virtual_pin' => $result
                 ]
             ]);
         } catch (\Exception $e) {
