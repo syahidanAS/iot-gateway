@@ -34,6 +34,7 @@ class MqttSubscribe extends Command
             $device_id = $parts[1] ?? null;
             $type = $parts[2] ?? null;
 
+            echo "Device: $device_id | Type: $type | Message: $message\n";
 
             DB::connection('timescale_remote')->table('data_points')->insert([
                 'device_id' => $device_id,

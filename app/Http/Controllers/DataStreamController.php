@@ -9,6 +9,8 @@ use App\Services\InfluxDB2Service;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
+use PhpMqtt\Client\ConnectionSettings;
+use PhpMqtt\Client\MqttClient;
 
 class DataStreamController extends Controller
 {
@@ -147,25 +149,47 @@ class DataStreamController extends Controller
                 ], 404);
             }
 
-            // $this->influx->write(
-            //     $device->id,
-            //     $virtualPin->pin_name,
-            //     $request->value,
-            //     $dataStream->data_type
-            // );
-
             DB::connection('timescale_remote')->table('data_points')->insert([
                 'device_id' => $device->id,
                 'virtual_pin' => $virtualPin->pin_name,
                 'value' => $request->value,
                 'data_type' => $dataStream->data_type,
+                'tag' => $dataStream->tag,
                 'created_at' => now(),
                 'updated_at' => now(),
             ]);
 
+            try {
+
+                $mqtt = new MqttClient(
+                    env('MQTT_HOST'),
+                    env('MQTT_PORT'),
+                    'laravel-publisher-' . uniqid()
+                );
+
+                $settings = (new ConnectionSettings)
+                    ->setUsername($device->device_name) // basic auth username
+                    ->setPassword($device->key)         // secret key
+                    ->setConnectTimeout(3);
+
+                $mqtt->connect($settings, true);
+
+                $topic = "device/{$device->device_name}/{$virtualPin->pin_name}";
+
+                $payload = $request->value;
+
+                $mqtt->publish($topic, $payload, 0);
+
+                $mqtt->disconnect();
+            } catch (\Throwable $e) {
+                logger()->error("MQTT publish error: " . $e->getMessage());
+            }
+
             return response()->json([
                 'status' => 'success',
-                'message' => 'State changed successfully'
+                'message' => 'State changed successfully',
+                'topic' => $topic,
+                'payload' => $payload
             ]);
         } catch (\Exception $e) {
             return response()->json([
@@ -178,7 +202,7 @@ class DataStreamController extends Controller
     public function getDeviceStates(Request $request)
     {
         $validator = Validator::make($request->all(), [
-            'device_id' => 'required'
+            'device_id' => 'required|integer'
         ]);
 
         if ($validator->fails()) {
@@ -189,12 +213,24 @@ class DataStreamController extends Controller
         }
 
         try {
-            // 1. Ambil semua virtual pin + datastream metadata
-            $pins = VirtualPin::where('device_id', $request->device_id)
-                ->with('dataStreams')
-                ->get();
 
-            // 2. Ambil latest value dari timescale
+            // =========================
+            // 1. GET DEVICE + PIN
+            // =========================
+            $device = SecretKey::where('id', $request->device_id)
+                ->with('virtualPin.dataStreams')
+                ->first();
+
+            if (!$device) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Device not found'
+                ], 404);
+            }
+
+            // =========================
+            // 2. LATEST STATE FROM TIMESCALE
+            // =========================
             $latest = DB::connection('timescale_remote')
                 ->select("
                 SELECT DISTINCT ON (virtual_pin)
@@ -207,32 +243,38 @@ class DataStreamController extends Controller
                 ORDER BY virtual_pin, created_at DESC
             ", [$request->device_id]);
 
-            // 3. Convert jadi map biar cepat lookup
             $latestMap = collect($latest)->keyBy('virtual_pin');
 
-            // 4. Merge metadata + state
-            $result = $pins->map(function ($pin) use ($latestMap) {
+            // =========================
+            // 3. MERGE RESPONSE
+            // =========================
+            $result = collect($device->virtualPin)->map(function ($pin) use ($latestMap) {
 
                 $state = $latestMap[$pin->pin_name] ?? null;
 
-                // logic human readable state
                 $value = $state->value ?? null;
                 $dataType = $state->data_type ?? null;
 
-                $formattedState = $this->formatState($value, $dataType);
-
                 return [
-                    'pin' => $pin->pin_name,
-                    'datastreams' => $pin->dataStreams,
-                    'state' => $formattedState,
+                    'pin_name' => $pin->pin_name,
+                    'data_streams' => $pin->dataStreams,
+                    'state' => $this->formatState($value, $dataType),
                     'raw_value' => $value,
                     'updated_at' => $state->created_at ?? null,
                 ];
             });
 
+            // =========================
+            // 4. RESPONSE CLEAN
+            // =========================
             return response()->json([
                 'status' => 'success',
-                'data' => $result
+                'data' => [
+                    'device_id' => $device->id,
+                    'device_name' => $device->device_name,
+                    'key' => $device->key,
+                    'virtual_pin' => $result
+                ]
             ]);
         } catch (\Exception $e) {
             return response()->json([
@@ -241,7 +283,6 @@ class DataStreamController extends Controller
             ], 500);
         }
     }
-
     private function formatState($value, $type)
     {
         if ($type === 'boolean') {
