@@ -13,6 +13,7 @@ class DataStream extends Model
         'min_value',
         'max_value',
         'description',
+        'tag',
     ];
 
     public function virtualPin()
