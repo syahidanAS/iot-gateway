@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\AutomationController;
 use App\Http\Controllers\DataStreamController;
 use App\Http\Controllers\MqttHandler;
 use App\Http\Controllers\SecretKey;
@@ -35,6 +36,10 @@ Route::prefix('v1')->group(function () {
     Route::prefix('data-streams')->middleware('jwt')->group(function () {
         Route::get('/', [DataStreamController::class, 'index']);
         Route::post('/', [DataStreamController::class, 'create']);
+    });
+
+    Route::prefix('automation')->middleware('jwt')->group(function () {
+        Route::get('/device-infos', [AutomationController::class, 'populateDeviceInfo']);
     });
 
     Route::get('/mutate-state', [DataStreamController::class, 'mutateState']);
