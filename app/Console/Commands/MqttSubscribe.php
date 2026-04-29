@@ -23,8 +23,7 @@ class MqttSubscribe extends Command
 
         $settings = (new ConnectionSettings)
             ->setUsername(env('MQTT_USERNAME'))
-            ->setPassword(env('MQTT_PASSWORD'))
-            ->setKeepAliveInterval(60);
+            ->setPassword(env('MQTT_PASSWORD'));
 
         $mqtt->connect($settings, true);
 
