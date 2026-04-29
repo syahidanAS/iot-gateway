@@ -3,6 +3,7 @@
 namespace App\Console\Commands;
 
 use Illuminate\Console\Command;
+use Illuminate\Support\Facades\DB;
 use PhpMqtt\Client\MqttClient;
 use PhpMqtt\Client\ConnectionSettings;
 
@@ -22,7 +23,8 @@ class MqttSubscribe extends Command
 
         $settings = (new ConnectionSettings)
             ->setUsername(env('MQTT_USERNAME'))
-            ->setPassword(env('MQTT_PASSWORD'));
+            ->setPassword(env('MQTT_PASSWORD'))
+            ->setKeepAliveInterval(60);
 
         $mqtt->connect($settings, true);
 
@@ -33,15 +35,15 @@ class MqttSubscribe extends Command
             $device_id = $parts[1] ?? null;
             $type = $parts[2] ?? null;
 
-            echo "Device: $device_id | Type: $type | Message: $message\n";
 
-            // contoh simpan ke DB
-            // ModelsData::create([
-            //     'device_id' => $device_id,
-            //     'type' => $type,
-            //     'message' => $message
-            // ]);
-
+            DB::connection('timescale_remote')->table('data_points')->insert([
+                'device_id' => $device_id,
+                'virtual_pin' => $type,
+                'value' => $message,
+                'data_type' => 'integer',
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
         }, 0);
 
         $mqtt->loop(true);
