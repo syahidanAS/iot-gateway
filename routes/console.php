@@ -4,7 +4,7 @@ use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Schedule;
 
-Schedule::command('automation:run')->everyMinute();
+Schedule::command('automation:run')->everyFiveSeconds();
 
 Artisan::command('inspire', function () {
     $this->comment(Inspiring::quote());
