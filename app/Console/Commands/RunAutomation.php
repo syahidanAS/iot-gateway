@@ -118,6 +118,10 @@ class RunAutomation extends Command
             $this->error("ERROR: " . $e->getMessage());
         }
 
+        Log::info('Automation executed', [
+            'time' => now()->toDateTimeString()
+        ]);
+
         $this->info("=== DONE ===");
     }
 
