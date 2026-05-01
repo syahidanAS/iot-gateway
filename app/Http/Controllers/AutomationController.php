@@ -135,7 +135,7 @@ class AutomationController extends Controller
     // =========================
     public function destroy($id, Request $request)
     {
-        $automation = Automation::where('user_id', $request->user()->id)
+        $automation = Automation::where('user_id', $request->user_id)
             ->findOrFail($id);
 
         $automation->delete();
