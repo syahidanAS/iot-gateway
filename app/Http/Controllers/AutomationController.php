@@ -165,4 +165,35 @@ class AutomationController extends Controller
             ], 500);
         }
     }
+
+    public function toggleStatus($id, Request $request)
+    {
+        $request->validate([
+            'state' => 'required|boolean',
+        ]);
+        try {
+            $automation = Automation::where('user_id', $request->user_id)->where('id', $id)->first();
+            if (!$automation) {
+                return response()->json([
+                    'status' => false,
+                    'message' => 'Automation not found'
+                ]);
+            }
+
+            $automation->update([
+                'is_active' => $request->state
+            ]);
+
+            return response()->json([
+                'status' => true,
+                'message' => 'Automation has been ' . ($request->state ? 'enabled' : 'disabled')
+            ]);
+        } catch (\Exception $error) {
+            \Log::error($error);
+            return response()->json([
+                'status' => false,
+                'message' => 'Something went wrong!'
+            ], 500);
+        }
+    }
 }
